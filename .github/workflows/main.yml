@@ -1,11 +1,11 @@
 # 名前を付ける。これがGithubActions上に表示される
 name: Run Daily build
 on:
-  # schedule:
-  #   - cron: '0 0 * * *'  # 毎日日本時間午前9時に実行
+  schedule:
+    - cron: '40 5 * * *'  # 毎日日本時間午前9時に実行
 
-  push:
-    branches: [ "feat/cicd" ]
+  # push:
+  #   branches: [ "feat/cicd" ]
   #mainに送るやつがビルドできるかのチェック！！
   #pull_request:
     #branches: [ "main" ]
