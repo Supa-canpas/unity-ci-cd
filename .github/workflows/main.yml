@@ -1,0 +1,94 @@
+# 名前を付ける。これがGithubActions上に表示される
+name: Run Daily build
+on:
+  # schedule:
+  #   - cron: '0 0 * * *'  # 毎日日本時間午前9時に実行
+
+  push:
+    branches: [ "feat/cicd" ]
+  #mainに送るやつがビルドできるかのチェック！！
+  #pull_request:
+    #branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      matrix:
+        include:
+          - name: Windows
+            runner: ubuntu-latest           # MonoならLinuxでOK。IL2CPPなら windows-latest に変更
+            targetPlatform: StandaloneWindows64
+            scriptingBackend: Mono
+          - name: macOS
+            runner: macos-latest
+            targetPlatform: StandaloneOSX
+            scriptingBackend: Mono
+          - name: Linux
+            runner: ubuntu-latest
+            targetPlatform: StandaloneLinux64
+            scriptingBackend: Mono
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      # リポジトリのチェックアウト
+      - name: Check out my unity project.
+        uses: actions/checkout@v4
+
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      # LFSファイルのキャッシュを取得する
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        id: lfs-cache
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      # LFSファイルをPullする
+      - name: Git LFS Pull
+        run: |
+          git lfs pull
+          git add .
+          git reset --hard
+
+      # ファイル名にgitのハッシュを含めたいので$GITHUB_OUTPUTに保存しておく
+      - name: Set outputs
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+        # JSTの今日(YYYYMMDD)を出力
+      - name: Set today (JST)
+        id: today
+        shell: bash
+        run: echo "today=$(TZ=Asia/Tokyo date +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      # Cache（プラットフォーム別キーにして衝突回避）
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ matrix.targetPlatform }}-
+
+      # Unityプロジェクトのビルド
+      - name: Run the ${{ matrix.name }} build
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          targetPlatform: ${{ matrix.targetPlatform }}
+          unityVersion: 6000.2.2f1  # 使うUnityのバージョン
+          #scriptingBackend: ${{ matrix.scriptingBackend }}
+
+      # 成果物をアップロード（名前をプラットフォーム別に）
+      - name: Upload the ${{ matrix.name }} Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-${{ matrix.name }}-${{ steps.today.outputs.today }}-${{ steps.vars.outputs.sha_short }}
+          path: build
