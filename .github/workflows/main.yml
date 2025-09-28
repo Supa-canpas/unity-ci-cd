@@ -2,7 +2,7 @@
 name: Run Daily build
 on:
   schedule:
-    - cron: '40 5 * * *'  # 毎日日本時間午前9時に実行
+    - cron: '50 5 * * *'  # 毎日日本時間午前9時に実行
 
   # push:
   #   branches: [ "feat/cicd" ]
@@ -78,8 +78,6 @@ jobs:
       - name: Run the ${{ matrix.name }} build
         uses: game-ci/unity-builder@v4
         env:
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
           targetPlatform: ${{ matrix.targetPlatform }}
