@@ -5,7 +5,7 @@ on:
     - cron: '50 5 * * *'  # 毎日日本時間午前9時に実行
 
   push:
-    branches: [ "feat/cicd" ]
+    branches: [ "main" ]
   #mainに送るやつがビルドできるかのチェック！！
   #pull_request:
     #branches: [ "main" ]
